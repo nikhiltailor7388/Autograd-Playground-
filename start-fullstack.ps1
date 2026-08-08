@@ -10,6 +10,11 @@ $backendCandidates = @(
 )
 $backendExe = $backendCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 
+# The UCRT64-built backend needs these runtime DLLs when launched from Explorer.
+if (Test-Path 'C:\msys64\ucrt64\bin') {
+    $env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;$env:PATH"
+}
+
 if (Test-Path $envFile) {
     Get-Content $envFile | ForEach-Object {
         if ($_ -match '^\s*([^#=\s]+)\s*=\s*(.*?)\s*$') {
@@ -19,6 +24,8 @@ if (Test-Path $envFile) {
 }
 
 Write-Host 'Starting Autograd full stack...' -ForegroundColor Cyan
+
+Get-Process autograd_server,node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
 if (-not $backendExe -and (Test-Path 'C:\msys64\ucrt64\bin\g++.exe')) {
     Write-Host 'Building the C++ backend automatically...' -ForegroundColor Yellow
@@ -31,6 +38,12 @@ if (-not $backendExe -and (Test-Path 'C:\msys64\ucrt64\bin\g++.exe')) {
 if ($backendExe) {
     $backendProcess = Start-Process -FilePath $backendExe -ArgumentList '8080' -WorkingDirectory $root -PassThru
     Write-Host "C++ backend started: $backendExe" -ForegroundColor Green
+    $backendReady = $false
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        if (Test-NetConnection -ComputerName localhost -Port 8080 -InformationLevel Quiet -WarningAction SilentlyContinue) { $backendReady = $true; break }
+        Start-Sleep -Milliseconds 250
+    }
+    if (-not $backendReady) { throw 'C++ backend did not become ready on port 8080.' }
 } else {
     Write-Warning 'C++ backend executable was not found. Starting the frontend mock API instead.'
     Write-Warning 'Install a modern C++ compiler, rebuild with CMake, and rerun this launcher for the real backend.'
@@ -42,8 +55,12 @@ if (-not (Test-Path (Join-Path $frontend 'node_modules'))) {
     try { & npm.cmd install } finally { Pop-Location }
 }
 
-$frontendProcess = Start-Process -FilePath 'cmd.exe' -ArgumentList "/c set PORT=3000&& node `"$(Join-Path $frontend 'server.js')`"" -WorkingDirectory $frontend -PassThru
-Start-Sleep -Milliseconds 700
+$frontendCommand = "set PORT=3000&& node `"$(Join-Path $frontend 'server.js')`""
+$frontendProcess = Start-Process -FilePath 'cmd.exe' -ArgumentList '/d', '/c', $frontendCommand -WorkingDirectory $frontend -PassThru
+for ($attempt = 0; $attempt -lt 20; $attempt++) {
+    if (Test-NetConnection -ComputerName localhost -Port 3000 -InformationLevel Quiet -WarningAction SilentlyContinue) { break }
+    Start-Sleep -Milliseconds 250
+}
 Start-Process 'http://localhost:3000'
 
 Write-Host ''
