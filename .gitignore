@@ -1,0 +1,50 @@
+# Build directories (CMake out-of-source builds; FetchContent deps live
+# under here too, so this alone keeps ~50MB+ of downloaded httplib/json
+# source out of the repo).
+build/
+build4/
+build_full/
+cmake-build-*/
+out/
+temp-fetch/
+backend-build.log
+node_modules/
+
+# CMake-generated files if a build ever happens to run in-source
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Makefile
+cmake_install.cmake
+CTestTestfile.cmake
+compile_commands.json
+_deps/
+
+# Compiled artifacts
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Saved model / dataset artifacts produced by running the tools locally
+# (keep the repo's own sample dataset in data/, exclude ad-hoc outputs)
+*.model.json
+/models/
+/*.csv
+!data/*.csv
+
+# Editor / OS cruft
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Docker
+.dockerignore
+
+# Local secrets
+.env
+*.local
