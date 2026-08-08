@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const https = require('https');
+const http = require('http');
 
 const app = express();
 app.use(cors());
@@ -42,6 +43,33 @@ function askPieGeni(prompt) {
   });
 }
 
+function proxyBackend(path, body) {
+  const configuredBackendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+  const backendUrl = new URL(/^https?:\/\//i.test(configuredBackendUrl) ? configuredBackendUrl : `https://${configuredBackendUrl}`);
+  const transport = backendUrl.protocol === 'https:' ? https : http;
+  const payload = JSON.stringify(body || {});
+  return new Promise((resolve, reject) => {
+    const request = transport.request({
+      hostname: backendUrl.hostname,
+      port: backendUrl.port || (backendUrl.protocol === 'https:' ? 443 : 80),
+      path: `${backendUrl.pathname.replace(/\/$/, '')}${path}`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+    }, (response) => {
+      let result = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => { result += chunk; });
+      response.on('end', () => {
+        try { resolve({ status: response.statusCode, body: JSON.parse(result) }); }
+        catch { reject(new Error(`backend returned invalid JSON (status ${response.statusCode})`)); }
+      });
+    });
+    request.on('error', (error) => reject(new Error(`backend proxy error: ${error.message}`)));
+    request.write(payload);
+    request.end();
+  });
+}
+
 // Serve static frontend files from this folder
 app.use(express.static(path.join(__dirname)));
 
@@ -57,6 +85,17 @@ app.post('/api/piegeni', async (req, res) => {
   try { res.json(await askPieGeni(prompt)); }
   catch (error) { res.status(502).json({ error: error.message }); }
 });
+
+for (const route of ['/api/compute', '/api/train-xor']) {
+  app.post(route, async (req, res) => {
+    try {
+      const result = await proxyBackend(route, req.body);
+      res.status(result.status).json(result.body);
+    } catch (error) {
+      res.status(502).json({ error: error.message });
+    }
+  });
+}
 
 // Basic safe-ish evaluator for the small expression language used by the
 // frontend. It's intentionally small and not a substitute for the C++ engine.

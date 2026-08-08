@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: autograd-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+
+  - type: web
+    name: autograd-playground
+    runtime: node
+    rootDir: frontend
+    buildCommand: npm ci
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: BACKEND_URL
+        fromService:
+          type: web
+          name: autograd-backend
+          property: host
+      - key: PIEGENI_API_KEY
+        sync: false
+      - key: PIEGENI_MODEL
+        value: gemini-flash-latest

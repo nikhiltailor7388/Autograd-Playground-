@@ -21,7 +21,7 @@ const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 const STORAGE_KEY_BACKEND_URL = 'autograd_backend_url';
 
 function getBackendUrl() {
-  return (localStorage.getItem(STORAGE_KEY_BACKEND_URL) || 'http://localhost:8080').replace(/\/+$/, '');
+  return (localStorage.getItem(STORAGE_KEY_BACKEND_URL) || window.location.origin).replace(/\/+$/, '');
 }
 
 function setBackendUrl(url) {
@@ -84,7 +84,7 @@ function initSettingsPanel() {
   });
 
   $('#settings-save').addEventListener('click', () => {
-    setBackendUrl(input.value.trim() || 'http://localhost:8080');
+    setBackendUrl(input.value.trim() || window.location.origin);
     checkHealth();
   });
 }

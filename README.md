@@ -123,6 +123,15 @@ autograd-cpp/
 
 Requires CMake >= 3.14 and a C++17 compiler.
 
+### Deploying to Render
+
+The repository includes `render.yaml` for a two-service deployment: a Docker
+web service for the real C++ backend and a Node web service for the frontend
+and PieGeni proxy. In Render, choose **New > Blueprint**, connect this
+repository, and apply the blueprint. Set `PIEGENI_API_KEY` in the frontend
+service's environment variables; do not commit the key. The frontend proxies
+compute and training requests to the C++ service automatically.
+
 ```bash
 cmake -B build
 cmake --build build
