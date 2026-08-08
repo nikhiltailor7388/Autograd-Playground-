@@ -1,0 +1,66 @@
+$ErrorActionPreference = 'Stop'
+
+$root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$frontend = Join-Path $root 'frontend'
+$envFile = Join-Path $frontend '.env'
+$backendCandidates = @(
+    (Join-Path $root 'build4\backend\autograd_server.exe'),
+    (Join-Path $root 'build\backend\autograd_server.exe'),
+    (Join-Path $root 'build-new\backend\autograd_server.exe')
+)
+$backendExe = $backendCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+if (Test-Path 'C:\msys64\ucrt64\bin') {
+    $env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;$env:PATH"
+}
+
+if (Test-Path $envFile) {
+    Get-Content $envFile | ForEach-Object {
+        if ($_ -match '^\s*([^#=\s]+)\s*=\s*(.*?)\s*$') {
+            [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process')
+        }
+    }
+}
+
+Write-Host 'Starting InfiniGrad full stack...' -ForegroundColor Cyan
+Get-Process autograd_server,node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+
+if (-not $backendExe -and (Test-Path 'C:\msys64\ucrt64\bin\g++.exe')) {
+    Write-Host 'Building the C++ backend automatically...' -ForegroundColor Yellow
+    & cmake -S $root -B (Join-Path $root 'build-new') -G 'MinGW Makefiles' -DCMAKE_CXX_COMPILER='C:/msys64/ucrt64/bin/g++.exe' -DAUTOGRAD_BUILD_BACKEND=ON
+    & cmake --build (Join-Path $root 'build-new')
+    $backendExe = Join-Path $root 'build-new\backend\autograd_server.exe'
+}
+
+if (-not $backendExe) { throw 'InfiniGrad backend executable was not found.' }
+$backendProcess = Start-Process -FilePath $backendExe -ArgumentList '8080' -WorkingDirectory $root -PassThru
+
+$backendReady = $false
+for ($attempt = 0; $attempt -lt 20; $attempt++) {
+    if (Test-NetConnection -ComputerName localhost -Port 8080 -InformationLevel Quiet -WarningAction SilentlyContinue) { $backendReady = $true; break }
+    Start-Sleep -Milliseconds 250
+}
+if (-not $backendReady) { throw 'InfiniGrad backend did not become ready on port 8080.' }
+
+if (-not (Test-Path (Join-Path $frontend 'node_modules'))) {
+    Push-Location $frontend
+    try { & npm.cmd install } finally { Pop-Location }
+}
+
+$frontendCommand = "set PORT=3000&& node `"$(Join-Path $frontend 'server.js')`""
+$frontendProcess = Start-Process -FilePath 'cmd.exe' -ArgumentList '/d', '/c', $frontendCommand -WorkingDirectory $frontend -PassThru
+for ($attempt = 0; $attempt -lt 20; $attempt++) {
+    if (Test-NetConnection -ComputerName localhost -Port 3000 -InformationLevel Quiet -WarningAction SilentlyContinue) { break }
+    Start-Sleep -Milliseconds 250
+}
+
+Start-Process 'http://localhost:3000'
+Write-Host 'InfiniGrad is live at http://localhost:3000' -ForegroundColor Green
+Write-Host 'Close this window to stop InfiniGrad.' -ForegroundColor DarkGray
+
+try {
+    while (-not $frontendProcess.HasExited) { Start-Sleep -Seconds 1 }
+} finally {
+    if ($backendProcess -and -not $backendProcess.HasExited) { Stop-Process $backendProcess.Id -Force }
+    if ($frontendProcess -and -not $frontendProcess.HasExited) { Stop-Process $frontendProcess.Id -Force }
+}
