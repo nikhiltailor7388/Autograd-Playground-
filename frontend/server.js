@@ -9,7 +9,7 @@ app.use(express.json());
 
 function askPieGeni(prompt) {
   const apiKey = process.env.PIEGENI_API_KEY;
-  const model = process.env.PIEGENI_MODEL || 'gemini-2.5-flash';
+  const model = process.env.PIEGENI_MODEL || 'gemini-flash-latest';
   if (!apiKey) return Promise.reject(new Error('PieGeni is not configured yet. Set PIEGENI_API_KEY on the server.'));
 
   const payload = JSON.stringify({
