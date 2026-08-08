@@ -1,7 +1,7 @@
 {
-  "name": "autograd-playground-dev",
+  "name": "infinigrad-dev",
   "version": "1.0.0",
-  "description": "Dev server + mock API for Autograd Playground frontend",
+  "description": "Dev server and API proxy for the InfiniGrad frontend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

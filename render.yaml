@@ -7,7 +7,7 @@ services:
     healthCheckPath: /api/health
 
   - type: web
-    name: autograd-playground
+    name: infinigrad
     runtime: node
     rootDir: frontend
     buildCommand: npm ci

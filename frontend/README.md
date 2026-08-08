@@ -1,4 +1,4 @@
-# Autograd Playground — Local dev server
+# InfiniGrad — Local dev server
 
 This folder includes a tiny Node.js dev server that serves the frontend and provides a mock `/api` so you can run the UI without building the C++ backend.
 

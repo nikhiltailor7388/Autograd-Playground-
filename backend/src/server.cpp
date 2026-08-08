@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
         handle_json_route(req, res, handle_train_xor);
     });
 
-    std::cout << "autograd-cpp backend listening on http://localhost:" << port << "\n";
+    std::cout << "InfiniGrad backend listening on http://localhost:" << port << "\n";
     std::cout << "  GET  /api/health\n";
     std::cout << "  POST /api/compute      { \"expr\": \"(a * b) + a\", \"a\": 2.0, \"b\": 3.0 }\n";
     std::cout << "  POST /api/train-xor    { \"epochs\": 500, \"learning_rate\": 0.05, \"hidden_layers\": [4, 4] }\n";

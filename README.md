@@ -1,4 +1,4 @@
-# autograd-cpp
+# InfiniGrad
 
 A tiny **automatic differentiation (autograd) engine**, built from scratch in
 C++17 using only the standard library — no PyTorch, no TensorFlow, no

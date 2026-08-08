@@ -1,5 +1,5 @@
 // =============================================================================
-// Autograd Playground — frontend logic
+// InfiniGrad — frontend logic
 //
 // Talks to the autograd_server REST API (Phase 5):
 //   GET  /api/health
