@@ -20,6 +20,14 @@ if (Test-Path $envFile) {
 
 Write-Host 'Starting Autograd full stack...' -ForegroundColor Cyan
 
+if (-not $backendExe -and (Test-Path 'C:\msys64\ucrt64\bin\g++.exe')) {
+    Write-Host 'Building the C++ backend automatically...' -ForegroundColor Yellow
+    $env:PATH = "C:\msys64\ucrt64\bin;C:\msys64\usr\bin;$env:PATH"
+    & cmake -S $root -B (Join-Path $root 'build-new') -G 'MinGW Makefiles' -DCMAKE_CXX_COMPILER='C:/msys64/ucrt64/bin/g++.exe' -DAUTOGRAD_BUILD_BACKEND=ON
+    & cmake --build (Join-Path $root 'build-new')
+    $backendExe = Join-Path $root 'build-new\backend\autograd_server.exe'
+}
+
 if ($backendExe) {
     $backendProcess = Start-Process -FilePath $backendExe -ArgumentList '8080' -WorkingDirectory $root -PassThru
     Write-Host "C++ backend started: $backendExe" -ForegroundColor Green
