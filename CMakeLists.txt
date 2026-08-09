@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14) # 3.14+ needed for FetchContent_MakeAvailable
+ cmake_minimum_required(VERSION 3.14) # 3.14+ needed for FetchContent_MakeAvailable
 project(autograd_cpp CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -21,7 +21,15 @@ FetchContent_Declare(
     GIT_TAG        v3.11.3
 )
 set(JSON_BuildTests OFF CACHE INTERNAL "" FORCE)
-FetchContent_MakeAvailable(json)
+
+FetchContent_Declare(
+    httplib
+    GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+    GIT_TAG        v0.15.3
+)
+set(HTTPLIB_COMPILE OFF CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(json httplib)
 
 # ---- Core engine library ----
 # Phases 1-4 (Value + backprop + MLP/XOR) plus Phase 7's advanced
@@ -42,7 +50,7 @@ target_link_libraries(autograd_core PUBLIC nlohmann_json::nlohmann_json)
 add_executable(autograd_demo
     src/main.cpp
 )
-target_link_libraries(autograd_demo PRIVATE autograd_core)
+target_link_libraries(autograd_demo PRIVATE autograd_core httplib::httplib)
 
 add_executable(grad_check
     tests/grad_check.cpp
