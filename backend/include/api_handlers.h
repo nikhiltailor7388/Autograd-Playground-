@@ -1,5 +1,4 @@
-#pragma once
-
+ #pragma once
 #include <nlohmann/json.hpp>
 
 // Each handler takes the parsed JSON request body and returns the JSON
@@ -24,3 +23,12 @@ nlohmann::json handle_compute(const nlohmann::json& body);
 //           "losses": [loss_epoch_0, loss_epoch_1, ...],
 //           "final_predictions": [ {"input":[x0,x1], "predicted", "target"}, ... ] }
 nlohmann::json handle_train_xor(const nlohmann::json& body);
+
+// POST /api/piegeni
+// Body:   { "prompt": "Find the derivative of f(x) = x^2 sin(x)" }
+// Result: { "answer": "..." }
+// Proxies the prompt to the Google Gemini API using the PIEGENI_API_KEY
+// environment variable (never sent to the browser). Throws if the key is
+// missing on the server, or if the upstream call fails/returns something
+// unexpected.
+nlohmann::json handle_piegeni(const nlohmann::json& body);
