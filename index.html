@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InfiniGrad &mdash; ∂/∂x</title>
+
+<!-- Fonts: Kalam (chalk handwriting, for headings) / IBM Plex Sans (UI copy) / IBM Plex Mono (every number) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Chart.js, for the loss curve -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="chalk-dust" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">&part;/&part;x</span>
+      <div class="brand-text">
+        <h1>InfiniGrad</h1>
+        <p>a live chalkboard for the C++ engine's backward pass</p>
+      </div>
+    </div>
+
+    <div class="conn-cluster">
+      <button id="settings-toggle" class="ghost-btn" type="button" aria-expanded="false" aria-controls="settings-panel">
+        backend&nbsp;settings
+      </button>
+      <span id="conn-status" class="conn-pill conn-pill--unknown">
+        <span class="conn-dot" aria-hidden="true"></span>
+        <span id="conn-status-text">checking…</span>
+      </span>
+    </div>
+  </div>
+
+  <div id="settings-panel" class="settings-panel" hidden>
+    <label for="backend-url">API base URL</label>
+    <input type="text" id="backend-url" value="http://localhost:8080" spellcheck="false" autocomplete="off">
+    <button id="settings-save" class="solid-btn" type="button">save &amp; reconnect</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ===================== EXPRESSION SANDBOX ===================== -->
+  <section class="panel" id="sandbox" aria-labelledby="sandbox-title">
+    <div class="panel-head">
+      <h2 id="sandbox-title">Expression Sandbox</h2>
+      <p>Write a scalar expression, set your variables, and watch <code>backward()</code> chalk the gradient onto every node.</p>
+    </div>
+
+    <div class="sandbox-grid">
+      <div class="sandbox-controls">
+
+        <div class="field-group">
+          <label id="vars-label">Variables</label>
+          <div id="vars-list" aria-labelledby="vars-label"></div>
+          <button id="add-var-btn" class="ghost-btn ghost-btn--small" type="button">+ add variable</button>
+        </div>
+
+        <div class="field-group">
+          <label for="expr-input">Expression</label>
+          <input type="text" id="expr-input" class="mono-input" value="(a * b) + a" spellcheck="false" autocomplete="off">
+          <p class="hint">supports <code>+ - * / ^</code>, parentheses, <code>sin() cos() tan() cot() sec() cosec()</code>, and <code>tanh() exp() log() relu()</code>. Angles use radians.</p>
+        </div>
+
+        <div class="preset-row" id="preset-row" aria-label="Example expressions"></div>
+
+        <button id="run-btn" class="solid-btn solid-btn--primary" type="button">
+          run backward()
+        </button>
+
+        <div id="sandbox-error" class="error-banner" hidden role="alert"></div>
+
+        <dl id="result-readout" class="result-readout" hidden>
+          <div><dt>output</dt><dd id="result-data">&mdash;</dd></div>
+          <div><dt>d(output)/d(output)</dt><dd id="result-grad">&mdash;</dd></div>
+        </dl>
+      </div>
+
+      <div class="graph-wrap">
+        <svg id="graph-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Computation graph"></svg>
+        <p id="graph-empty" class="graph-empty">run an expression to chalk up its graph</p>
+        <div class="graph-legend">
+          <span><i class="swatch swatch--leaf"></i> leaf / input</span>
+          <span><i class="swatch swatch--op"></i> operation</span>
+          <span><i class="swatch swatch--pulse"></i> gradient pulse (root → leaves)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="equation-plot-wrap">
+      <div class="equation-plot-head">
+        <h3>Cartesian plot</h3>
+        <p>enter an equation such as <code>x = y ^ 2</code> to plot its curve</p>
+      </div>
+      <svg id="equation-plot" viewBox="0 0 640 360" role="img" aria-label="Cartesian equation plot"></svg>
+      <p id="equation-plot-empty" class="graph-empty">run an equation to draw its curve</p>
+
+      <article id="equation-solution" class="equation-solution" hidden>
+        <h3>How to read the solution</h3>
+        <div id="equation-solution-content"></div>
+      </article>
+    </div>
+
+    <div class="calculus-tool">
+      <div class="equation-plot-head">
+        <h3>Calculus solver</h3>
+        <p>enter a derivative or integral in plain text or LaTeX</p>
+      </div>
+      <textarea id="calculus-input" class="mono-input calculus-input" rows="3" spellcheck="false">∫ sin(x) dx</textarea>
+      <button id="calculus-run-btn" class="solid-btn solid-btn--primary" type="button">solve calculus</button>
+      <div id="calculus-error" class="error-banner" hidden role="alert"></div>
+      <article id="calculus-solution" class="equation-solution" hidden>
+        <h3>Step-by-step solution</h3>
+        <div id="calculus-solution-content"></div>
+      </article>
+    </div>
+
+    <div class="teacher-tool">
+      <div class="equation-plot-head">
+        <h3>Teacher solution</h3>
+        <p>work through equations, functions, derivatives, and integrals step by step</p>
+      </div>
+      <textarea id="teacher-input" class="mono-input calculus-input" rows="3" spellcheck="false">2*x + 3 = 7</textarea>
+      <button id="teacher-run-btn" class="solid-btn solid-btn--primary" type="button">show complete solution</button>
+      <div id="teacher-error" class="error-banner" hidden role="alert"></div>
+      <article id="teacher-solution" class="equation-solution" hidden>
+        <h3>Worked solution</h3>
+        <div id="teacher-solution-content"></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel piegeni-panel" id="piegeni" aria-labelledby="piegeni-title">
+    <div class="panel-head">
+      <h2 id="piegeni-title">PieGeni Math Coach</h2>
+      <p>Ask for a rigorous explanation, worked steps, a verification, and a suggestion for the graph or chart to draw.</p>
+    </div>
+    <div class="piegeni-grid">
+      <div>
+        <label for="piegeni-input">Your question</label>
+        <textarea id="piegeni-input" class="mono-input calculus-input" rows="5" spellcheck="true">Find the derivative of f(x) = x^2 sin(x), explain every step, and describe its graph.</textarea>
+        <button id="piegeni-run-btn" class="solid-btn solid-btn--primary" type="button">ask PieGeni</button>
+        <div id="piegeni-error" class="error-banner" hidden role="alert"></div>
+      </div>
+      <article id="piegeni-answer" class="equation-solution" hidden>
+        <h3>PieGeni's worked solution</h3>
+        <pre id="piegeni-answer-content"></pre>
+      </article>
+    </div>
+  </section>
+
+  <!-- ===================== TRAINING DASHBOARD ===================== -->
+  <section class="panel" id="trainer" aria-labelledby="trainer-title">
+    <div class="panel-head">
+      <h2 id="trainer-title">XOR Training Dashboard</h2>
+      <p>Train the same tiny MLP from Phase 3 and watch the loss curve fall in real time.</p>
+    </div>
+
+    <div class="trainer-grid">
+      <div class="trainer-controls">
+        <div class="field-row">
+          <label for="hidden-layers-input">Hidden layers</label>
+          <input type="text" id="hidden-layers-input" class="mono-input" value="4, 4" spellcheck="false" autocomplete="off">
+          <p class="hint">comma-separated widths, e.g. <code>4, 4</code></p>
+        </div>
+
+        <div class="field-row">
+          <label for="epochs-input">Epochs <span id="epochs-value" class="slider-value">500</span></label>
+          <input type="range" id="epochs-input" min="50" max="3000" step="50" value="500">
+        </div>
+
+        <div class="field-row">
+          <label for="lr-input">Learning rate <span id="lr-value" class="slider-value">0.05</span></label>
+          <input type="range" id="lr-input" min="0.005" max="0.5" step="0.005" value="0.05">
+        </div>
+
+        <button id="train-btn" class="solid-btn solid-btn--primary" type="button">train on XOR</button>
+        <div id="trainer-error" class="error-banner" hidden role="alert"></div>
+        <p id="trainer-status" class="hint" aria-live="polite"></p>
+      </div>
+
+      <div class="trainer-chart-wrap">
+        <canvas id="loss-chart" role="img" aria-label="Loss curve over training epochs"></canvas>
+      </div>
+    </div>
+
+    <div class="predictions-wrap">
+      <h3>final predictions</h3>
+      <table id="predictions-table">
+        <thead>
+          <tr><th>x&#8320;</th><th>x&#8321;</th><th>target</th><th>predicted</th><th>&nbsp;</th></tr>
+        </thead>
+        <tbody id="predictions-body">
+          <tr class="predictions-placeholder"><td colspan="5">train the network to see results here</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <p>
+    Talks to the <code>autograd_server</code> REST API &mdash;
+    <code>POST /api/compute</code> and <code>POST /api/train-xor</code>.
+    Start the backend, then set its URL above if it isn't on <code>localhost:8080</code>.
+  </p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
