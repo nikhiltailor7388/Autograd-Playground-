@@ -161,14 +161,18 @@ json handle_piegeni(const json& body) {
         })}
     };
 
-    std::string path = "/v1beta/models/gemini-1.5-flash:generateContent?key=" + api_key;
-    auto res = cli.Post(path.c_str(), request_body.dump(), "application/json");
+    httplib::Headers headers = {
+        {"x-goog-api-key", api_key}
+    };
+
+    std::string path = "/v1beta/models/gemini-2.5-flash:generateContent";
+    auto res = cli.Post(path.c_str(), headers, request_body.dump(), "application/json");
 
     if (!res) {
         throw std::runtime_error("could not reach the Gemini API (network error)");
     }
     if (res->status != 200) {
-        throw std::runtime_error("Gemini API returned status " + std::to_string(res->status));
+        throw std::runtime_error("Gemini API returned status " + std::to_string(res->status) + ": " + res->body);
     }
 
     json gemini_response;
