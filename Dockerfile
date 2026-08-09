@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+ # syntax=docker/dockerfile:1
 #
 # Multi-stage build:
 #   1. "builder" has the full compiler toolchain and CMake, fetches the
@@ -42,7 +42,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 COPY --from=builder /workspace/build/backend/autograd_server ./autograd_server
-COPY --from=builder /workspace/frontend ./frontend
+COPY --from=builder /workspace/docs ./docs
 COPY --from=builder /workspace/data ./data
 
 EXPOSE 8080
