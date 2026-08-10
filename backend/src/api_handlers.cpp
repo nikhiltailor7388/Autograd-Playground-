@@ -165,8 +165,8 @@ json handle_piegeni(const json& body) {
         {"x-goog-api-key", api_key}
     };
 
-     std::string path = "/v1beta/models/gemini-2.5-flash-lite:generateContent";
-    auto res = cli.Post(path.c_str(), headers, request_body.dump(), "application/json");
+ std::string path = "/v1beta/models/gemini-3.6-flash:generateContent";
+ auto res = cli.Post(path.c_str(), headers, request_body.dump(), "application/json");
 
     if (!res) {
         throw std::runtime_error("could not reach the Gemini API (network error)");
