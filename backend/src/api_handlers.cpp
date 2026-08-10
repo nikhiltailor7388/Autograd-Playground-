@@ -165,7 +165,7 @@ json handle_piegeni(const json& body) {
         {"x-goog-api-key", api_key}
     };
 
-    std::string path = "/v1beta/models/gemini-2.0-flash:generateContent";
+    std::string path = "/v1beta/models/gemini-2.5-flash:generateContent";
     auto res = cli.Post(path.c_str(), headers, request_body.dump(), "application/json");
 
     if (!res) {
