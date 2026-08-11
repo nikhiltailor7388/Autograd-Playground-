@@ -19,9 +19,10 @@ const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 // ----------------------------------------------------------------------------
 
 const STORAGE_KEY_BACKEND_URL = 'autograd_backend_url';
+const DEFAULT_BACKEND_URL = 'https://autograd-backend-production.up.railway.app';
 
-function getBackendUrl() {
-  return (localStorage.getItem(STORAGE_KEY_BACKEND_URL) || window.location.origin).replace(/\/+$/, '');
+ function getBackendUrl() {
+  return (localStorage.getItem(STORAGE_KEY_BACKEND_URL) || DEFAULT_BACKEND_URL).replace(/\/+$/, '');
 }
 
 function setBackendUrl(url) {
